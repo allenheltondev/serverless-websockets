@@ -1,0 +1,14 @@
+{
+  "name": "serverless-websockets",
+  "version": "1.0.0",
+  "description": "SAM template that builds out a small but functional websocket API",
+  "devDependencies": {    
+    "eslint": "^6.8.0",
+    "eslint-config-google": "^0.14.0"
+  },
+  "scripts": {
+    "deploy": "sam build --parallel --cached && sam deploy",
+    "diagram": "cfn-dia draw.io -t template.yaml -o images/resource-diagram.drawio -c && drawio images/resource-diagram.drawio -o images/resource-diagram.png"
+  },
+  "license": "MIT"
+}

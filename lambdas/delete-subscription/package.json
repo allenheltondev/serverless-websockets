@@ -1,0 +1,14 @@
+{
+  "name": "delete-subscription",
+  "version": "1.0.0",
+  "description": "Deletes the subscription for an entity/identifier for a provided connection",
+  "main": "index.js",
+  "author": "allenheltondev",
+  "license": "MIT",
+  "dependencies": { },
+  "scripts": {},
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.44.0",
+    "http-status-codes": "^2.1.4"
+  }
+}

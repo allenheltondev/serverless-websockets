@@ -1,0 +1,345 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Serverless Websockets
+Parameters:  
+  TableName:
+    Type: String
+    Default: websocket
+  GSI1Name:
+    Type: String
+    Default: 'GSI1'
+  
+Globals:
+  Function:
+    Timeout: 5
+    Runtime: nodejs14.x
+    Tracing: Active
+    Architectures:
+      - arm64
+    Layers:
+      - !Ref DependencyLayer
+    Handler: index.handler
+    Environment:
+      Variables:
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1            
+  
+Resources:
+  DependencyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: nodejs14.x
+    Properties:
+      LayerName: websocket-dependency-layer
+      ContentUri: layers/
+      CompatibleRuntimes:
+        - nodejs14.x
+
+  WebsocketTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      GlobalSecondaryIndexes:
+        - IndexName: !Ref GSI1Name
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL  
+
+  WebsocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: WebsocketApi
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      OperationName: ConnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref ConnectIntegration
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      Description: Connect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateConnectionFunction.Arn}/invocations
+
+  CreateConnectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/create-socket-connection
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          TTL_HOURS: 24
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt WebsocketTable.Arn
+
+  ConnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebsocketApi
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CreateConnectionFunction
+      Principal: apigateway.amazonaws.com
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      OperationName: DisconnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref DisconnectIntegration
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      Description: Disconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteConnectionFunction.Arn}/invocations
+
+  DeleteConnectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/delete-socket-connection
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          ENDPOINT: !Join [ '', [ 'https://', !Ref WebsocketApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/dev'] ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource: !GetAtt WebsocketTable.Arn
+            - Effect: Allow
+              Action:
+                - execute-api:ManageConnections
+              Resource: 
+                - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*
+  
+  DisconnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebsocketApi
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DeleteConnectionFunction
+      Principal: apigateway.amazonaws.com
+  
+  DeleteSubscriptionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: unsubscribe 
+      AuthorizationType: NONE
+      OperationName: DeleteSubscriptionRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref DeleteSubscriptionIntegration
+
+  DeleteSubscriptionIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      Description: Unsubscribe Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteSubscriptionFunction.Arn}/invocations
+
+  DeleteSubscriptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/delete-subscription
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+              Resource: !GetAtt WebsocketTable.Arn
+
+  DeleteSubscriptionPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebsocketApi
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DeleteSubscriptionFunction
+      Principal: apigateway.amazonaws.com
+
+  CreateSubscriptionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebsocketApi
+      RouteKey: subscribe
+      AuthorizationType: NONE
+      OperationName: CreateSubscriptionRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref CreateSubscriptionIntegration
+
+  CreateSubscriptionIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebsocketApi
+      Description: Subscribe Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateSubscriptionFunction.Arn}/invocations
+
+  CreateSubscriptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/create-subscription
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          TTL_HOURS: 24
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource: !GetAtt WebsocketTable.Arn
+
+  CreateSubscriptionPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebsocketApi
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CreateSubscriptionFunction
+      Principal: apigateway.amazonaws.com
+  
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: dev
+      Description: Deployment Stage for Websocket api
+      DeploymentId: !Ref Deployment
+      ApiId: !Ref WebsocketApi
+
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+    - ConnectRoute
+    - DisconnectRoute
+    - CreateSubscriptionRoute
+    - DeleteSubscriptionRoute    
+    Properties:
+      ApiId: !Ref WebsocketApi  
+
+  PostToSubscriptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/post-to-subscriptions
+      Events:
+        EntityUpdatedQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EntityUpdatedQueue.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          INDEX_NAME: !Ref GSI1Name
+          ENDPOINT: !Join [ '', [ 'https://', !Ref WebsocketApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/dev'] ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaSQSQueueExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                !Join ['/', [ !GetAtt WebsocketTable.Arn, 'index', !Ref GSI1Name] ]
+            - Effect: Allow
+              Action:
+                - execute-api:ManageConnections
+              Resource: 
+                - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*
+  
+  EntityUpdatedQueue:
+    Type: AWS::SQS::Queue
+
+  EntityUpdatedNotificationEventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Push to websocket connections when an entity is updated
+      EventPattern:
+        detail-type:
+          - Entity Updated
+      Targets:
+        - Id: EntityUpdatedQueue
+          Arn: !GetAtt EntityUpdatedQueue.Arn
+
+  EntityUpdatedQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: SQS:SendMessage
+          Resource:  !GetAtt EntityUpdatedQueue.Arn
+      Queues:
+        - Ref: EntityUpdatedQueue
+
+Outputs:
+  WebsocketUri:
+    Description: The WSS Protocol Uri to connect to
+    Value: !Join [ '', [ 'wss://', !Ref WebsocketApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/dev'] ]
