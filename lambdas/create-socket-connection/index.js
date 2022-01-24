@@ -8,7 +8,7 @@ exports.UNHANDLED_ERROR_MESSAGE = 'Something went wrong';
 exports.handler = async (event) => {
   try {
     await exports.saveConnection(event.requestContext);
-    
+
     const response = {
       statusCode: StatusCodes.OK,
       headers: {
@@ -39,7 +39,11 @@ exports.buildPutItemCommandInput = (requestContext) => {
       sk: 'connection#',
       ipAddress: requestContext.identity.sourceIp,
       connectedAt: requestContext.connectedAt,
-      ttl: exports.calculateTtl(process.env.TTL_HOURS)
+      ttl: exports.calculateTtl(process.env.TTL_HOURS),
+      ...requestContext.authorizer?.userId && {
+        GSI1PK: requestContext.authorizer.userId,
+        GSI1SK: 'user#'
+      }
     })
   };
 };

@@ -1,0 +1,14 @@
+{
+  "name": "create-test-jwt",
+  "version": "1.0.0",
+  "description": "Creates an example JWT to be used for auth",
+  "main": "index.js",
+  "author": "allenheltondev",
+  "license": "MIT",
+  "dependencies": { },
+  "scripts": {},
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.47.1",
+    "jsonwebtoken": "^8.5.1"
+  }
+}

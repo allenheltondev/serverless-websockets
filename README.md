@@ -39,6 +39,21 @@ The architecture diagram below explains the processes going on for each endpoint
 
 ![Architecture Diagram](</images/Architecture Diagram.png>)
 
+## Auth
+
+When connecting to a WebSocket, auth is only required on the *$connect* route. This WebSocket is protected with a lambda authorizer that validates a JWT. To generate the JWT, you may use the AWS CLI (or use the console) and execute the `CreateTestJwt` lambda function. To get the token from the CLI, use the following command:
+
+```
+aws lambda invoke --function-name CreateTestJwt response.json
+```
+
+You can use the value from the `token` parameter in the output `response.json` file in one of two ways:
+
+1. As a query string parameter on connect: *token* - **RECOMMENDED**
+2. As a comma delimited value in the `Sec-WebSocket-Protocol` header: *websocket, {AUTH_TOKEN}*
+
+If you do not provide the auth token in one of the two methods above, you will receive a `401` on connect and your request will be rejected.
+
 ## Testing
 
 The easiest way to test your websocket connection is to use [Postman](https://www.postman.com). It supports [sending and receiving websockets](https://blog.postman.com/postman-supports-websocket-apis/) through it's application quickly and easily. You can find your websocket connection url as an output of the deployment script. 

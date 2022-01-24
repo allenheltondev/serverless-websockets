@@ -7,8 +7,10 @@
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.46.0",
     "@aws-sdk/client-dynamodb": "^3.44.0",
+    "@aws-sdk/client-secrets-manager": "^3.47.1",
     "@aws-sdk/util-dynamodb": "^3.44.0",
-    "http-status-codes": "^2.1.4"
+    "http-status-codes": "^2.1.4",
+    "jsonwebtoken": "^8.5.1"
   },
   "scripts": {},
   "files": []

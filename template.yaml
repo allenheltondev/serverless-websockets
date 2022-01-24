@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   Serverless Websockets
+
 Parameters:  
   TableName:
     Type: String
@@ -9,7 +10,9 @@ Parameters:
   GSI1Name:
     Type: String
     Default: 'GSI1'
-  
+  JwtSecret:
+    Type: String
+
 Globals:
   Function:
     Timeout: 5
@@ -22,8 +25,8 @@ Globals:
     Handler: index.handler
     Environment:
       Variables:
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1            
-  
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
 Resources:
   DependencyLayer:
     Type: AWS::Serverless::LayerVersion
@@ -74,12 +77,78 @@ Resources:
       ProtocolType: WEBSOCKET
       RouteSelectionExpression: "$request.body.action"
 
+  WebSocketAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: WebSocketAuthorizer
+      ApiId: !Ref WebsocketApi
+      AuthorizerType: REQUEST
+      AuthorizerUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:AuthorizerFunction/invocations
+      AuthorizerCredentialsArn: !GetAtt AuthorizerExecutionRole.Arn
+      IdentitySource:
+        - route.request.header.Sec-WebSocket-Protocol
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: AuthorizerFunction
+      CodeUri: lambdas/authorizer
+      Environment:
+        Variables:
+          JWT_SIGNATURE_SECRET: !Ref JwtSignatureSecret
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref JwtSignatureSecret
+
+  JwtSignatureSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: JwtSignatureSecret
+      Description: Secret for WebSocket JWT Signature
+      SecretString:
+        Fn::Sub:
+          - |-
+            {
+              "signature": "${signature}"
+            }
+          - signature: !Ref JwtSecret
+
+  AuthorizerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: InvokeAuthorizer
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - lambda:InvokeFunction
+                Resource: !GetAtt AuthorizerFunction.Arn
+
   ConnectRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref WebsocketApi
       RouteKey: $connect
-      AuthorizationType: NONE
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref WebSocketAuthorizer
       OperationName: ConnectRoute
       Target: !Join
         - '/'
@@ -338,6 +407,23 @@ Resources:
           Resource:  !GetAtt EntityUpdatedQueue.Arn
       Queues:
         - Ref: EntityUpdatedQueue
+
+  CreateTestJwt:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CreateTestJwt
+      CodeUri: lambdas/create-test-jwt
+      Environment:
+        Variables:
+          JWT_SIGNATURE_SECRET: !Ref JwtSignatureSecret
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref JwtSignatureSecret
 
 Outputs:
   WebsocketUri:

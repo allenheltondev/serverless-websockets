@@ -1,0 +1,14 @@
+{
+  "name": "authorizer",
+  "version": "1.0.0",
+  "description": "Lambda authorizer for authenticating websocket connections",
+  "main": "index.js",
+  "author": "allenheltondev",
+  "license": "MIT",
+  "dependencies": { },
+  "scripts": {},
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.47.1",
+    "jsonwebtoken": "^8.5.1"
+  }
+}
