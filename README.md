@@ -49,7 +49,7 @@ aws lambda invoke --function-name CreateTestJwt response.json
 
 You can use the value from the `token` parameter in the output `response.json` file in one of two ways:
 
-1. As a query string parameter on connect: *token* - **RECOMMENDED**
+1. As a query string parameter on connect: *access_token* - **RECOMMENDED**
 2. As a comma delimited value in the `Sec-WebSocket-Protocol` header: *websocket, {AUTH_TOKEN}*
 
 If you do not provide the auth token in one of the two methods above, you will receive a `401` on connect and your request will be rejected.

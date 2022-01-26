@@ -27,11 +27,11 @@ exports.handler = async (event, context) => {
     }
 
     if (!authToken) {
-      if (!event?.queryStringParameters?.token) {
+      if (!event?.queryStringParameters?.access_token) {
         throw new Error(exports.MISSING_AUTH_TOKEN_MESSAGE);
       }
 
-      authToken = event.queryStringParameters.token;
+      authToken = event.queryStringParameters.access_token;
     }
 
     const jwtData = await exports.verifyJwt(authToken);
