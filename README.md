@@ -37,7 +37,7 @@ These will be used by a websocket adapter in your user interface or testing tool
 
 The architecture diagram below explains the processes going on for each endpoint, plus how the push notifications are sent out.
 
-![Architecture Diagram](</images/Architecture Diagram.png>)
+![Architecture Diagram](</images/Architecture Diagram - Auth.png>)
 
 ## Auth
 
