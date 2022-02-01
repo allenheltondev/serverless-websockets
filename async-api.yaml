@@ -1,0 +1,172 @@
+asyncapi: 2.2.0
+info:
+  title: Serverless WebSocket Tutorial
+  version: 1.0.0
+  description: |
+    Describes the AWS WebSocket connection and methods generated from the `serverless-websockets` GitHub repo. Contained in the spec are:
+
+    * WebSocket connection information
+    * EventBridge event configuration for triggering WebSocket push notifications
+
+defaultContentType: application/json
+
+servers: 
+  private:
+    url: jgm****.execute-api.us-east-1.amazonaws.com/dev
+    protocol: wss
+    description: |
+      Connection url for the WebSocket. Generated on deployment and rendered as output with the label `WebsocketUri`
+
+      ### Authentication
+      To connect to this WebSocket, you must get a valid auth token from the *create-test-jwt* lambda function. You can use the token in one of two ways:
+        * As a query parameter on *$connect* called `auth_token`
+        * As a comma separated value in the `Sec-WebSocket-Protocol` header
+            * The `Sec-WebSocket-Protocol` header is required on connect. It must have a value of `websocket`. If using this header as the auth method, the value would be `websocket, <auth token>`
+      
+      ### Example Connection Url
+      > wss://jgm****.execute-api.us-east-1.amazonaws.com/dev?access_token=eyJhbG
+
+channels:
+  /:
+    publish:
+      operationId: sendMessage
+      tags:
+        - name: WebSocket
+      message:
+        oneOf:
+          - $ref: '#/components/messages/subscribe'
+          - $ref: '#/components/messages/unsubscribe'
+    subscribe:
+      operationId: receiveSubscriptionMessage
+      tags:
+        - name: WebSocket
+      message:
+        $ref: '#/components/messages/receiveSubscriptionMessage'
+  
+  EntityUpdated:
+    publish:
+      operationId: entityUpdated
+      description: Trigger push notifications for entity updates
+      tags:
+        - name: EventBridge
+      message:
+        $ref: '#/components/messages/entityUpdated'
+
+components:
+  messages:
+    subscribe:
+      name: subscribe
+      title: Subscribe for Updates
+      summary: Subscribes for updates when an entity is updated in the system
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/subscribe'
+      examples:
+        - payload:
+            action: subscribe
+            entityId: myEntityId
+
+    unsubscribe:
+      name: unsubscribe
+      title: Unsubscribe from Updates
+      summary: Removes subscription for updates when an entity is updated in the system
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/unsubscribe'
+      examples:
+        - payload:
+            action: unsubscribe
+            entityId: myEntityId
+
+    receiveSubscriptionMessage:
+      name: receiveMessage
+      title: Receive Push Notification
+      summary: Push notification received when a subscribed entity has been updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/receiveSubscriptionMessage'
+      examples:
+        - payload:
+            type: Entity Updated
+            entityId: myEntityId
+            message: Status changed from 'New' to 'In Progress'
+
+    entityUpdated:
+      name: entityUpdated
+      title: Notify the system of an entity update
+      summary: Send push notifications to subscribers for a specific entity when fields change
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/entityUpdatedMessage'
+      examples:
+        - payload:
+            detail-type: Entity Updated
+            detail:
+              entityId: myEntityId
+              message: Status changed from 'New' to 'In Progress'
+
+  schemas:
+    subscribe:
+      type: object
+      required:
+        - action
+        - entityId
+      properties:
+        action:
+          const: subscribe
+        entityId:
+          type: string
+          description: Unique identifier of the entity to subscribe for updates
+          example: myEntityId
+
+    unsubscribe:
+      type: object
+      required:
+        - action
+        - entityId
+      properties:
+        action:
+          const: unsubscribe
+        entityId:
+          type: string
+          description: Unique identifier of the entity to unsubscribe from
+          example: myEntityId
+
+    receiveSubscriptionMessage:
+      type: object
+      required:
+        - type
+        - entityId
+      properties:
+        type: 
+          const: Entity Updated
+        entityId:
+          type: string
+          description: Unique identifier of the entity that was updated
+          example: myEntityId
+        message:
+          type: string
+          description: Message provided by the system related to the entity update
+          example: Status changed from 'New' to 'In Progress'
+
+    entityUpdatedMessage:
+      type: object
+      required:
+        - detail-type
+        - detail
+      properties:
+        detail-type:
+          const: Entity Updated
+        detail:
+          type: object
+          required:
+            - entityId
+          properties:
+            entityId: 
+              type: string
+              description: Unique identifier for the updated entity
+              example: myEntityId
+            message:
+              type: string
+              description: Message to send in the push notification
+              example: Status changed from 'New' to 'In Progress'
