@@ -1,0 +1,7 @@
+[
+  {
+    "Source": "CLI",
+    "DetailType": "Entity Updated",
+    "Detail": "{\"entityId\":\"myEntityId\",\"message\":\"The example worked!\"}"
+  }
+]

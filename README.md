@@ -24,14 +24,6 @@ For convenience, these commands have been added together as a single npm script,
 npm run deploy
 ```
 
-## WebSocket Series
-
-This repo contains several branches and accompanying blog posts that walk you through how to build a WebSocket step by step. The `main` branch contains everything that has been currently released, but if you want to take a phased approach you can follow along below.
-
-1. [Intro To WebSockets](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets/) - [part-one branch](https://github.com/allenheltondev/serverless-websockets/tree/part-one)
-2. [Implementing Auth](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-two/) - [part-two branch](https://github.com/allenheltondev/serverless-websockets/tree/part-two)
-3. [Documenting with Async API Spec](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-three/) - [part-three branch](https://github.com/allenheltondev/serverless-websockets/tree/part-three)
-
 ## How It Works
 
 After deployment, you will have an API Gateway v2 resource with several endpoints registered:
@@ -45,7 +37,7 @@ These will be used by a WebSocket adapter in your user interface or testing tool
 
 The architecture diagram below explains the processes going on for each endpoint, plus how the push notifications are sent out.
 
-![Architecture Diagram](</images/Architecture Diagram - Auth.png>)
+![Architecture Diagram](</images/Architecture Diagram - User Notifications.png>)
 
 ## Auth
 
@@ -65,6 +57,26 @@ If you do not provide the auth token in one of the two methods above, you will r
 ## Testing
 
 The easiest way to test your WebSocket connection is to use [Postman](https://www.postman.com). It supports [sending and receiving WebSocket](https://blog.postman.com/postman-supports-websocket-apis/) through it's application quickly and easily. You can find your WebSocket connection url as an output of the deployment script. 
+
+## Triggering Events
+
+If you want to trigger an `Entity Updated` or `Send User Push Notification` event, doing so is easy with the sample events provided in the *examples* folder. Once you connect to the WebSocket, you can send a push notification with the following commands:
+
+### Entity Updated
+
+*Once you have subscribed to an entity with `entityId` of **myEntityId**, you can use this command in the terminal to send the `Entity Updated` event*
+
+```
+aws events put-events --entries file://examples/entity-updated.json
+```
+
+### Send User Push Notification
+
+*Once you have connected to the WebSocket with the jwt generated via the `CreateTestJwt` lambda, you can use this command in the terminal to send the `Send User Push Notification` event*
+
+```
+aws events put-events --entries file://examples/send-user-push-notification.json
+```
 
 ## Resources
 

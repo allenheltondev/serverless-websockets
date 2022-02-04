@@ -25,8 +25,8 @@ exports.handler = async (event) => {
 };
 
 exports.deleteAllConnections = async (connectionId) => {
-  const params = exports.buildQueryCommand(connectionId);
-  const response = await ddb.send(new QueryCommand(params));
+  const command = exports.buildQueryCommand(connectionId);
+  const response = await ddb.send(command);
   if (response?.Items?.length) {
     const transactionItems = response.Items.map((item) => {
       return exports.buildDeleteConnectionParams(item);
@@ -39,13 +39,15 @@ exports.deleteAllConnections = async (connectionId) => {
 };
 
 exports.buildQueryCommand = (connectionId) => {
-  return {
+  const params = {
     TableName: process.env.TABLE_NAME,
     KeyConditionExpression: 'pk = :pk',
     ExpressionAttributeValues: marshall({
       ':pk': connectionId 
     })
   };
+
+  return new QueryCommand(params);
 };
 
 exports.buildDeleteConnectionParams = (item) => {

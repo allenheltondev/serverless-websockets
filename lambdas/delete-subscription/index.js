@@ -26,12 +26,12 @@ exports.handler = async (event) => {
 };
 
 exports.deleteSubscription = async (connectionId, entityId) => {
-  const params = exports.buildDeleteItemCommandInput(connectionId, entityId);
-  await ddb.send(new DeleteItemCommand(params));
+  const command = exports.buildDeleteItemCommand(connectionId, entityId);
+  await ddb.send(command);
 };
 
 
-exports.buildDeleteItemCommandInput = (connectionId, entityId) => {
+exports.buildDeleteItemCommand = (connectionId, entityId) => {
   const params = {
     TableName: process.env.TABLE_NAME,
     Key: marshall({
@@ -39,6 +39,6 @@ exports.buildDeleteItemCommandInput = (connectionId, entityId) => {
       sk: `subscription#${entityId}`
     })
   };
-console.log(params);
-  return params;
+  
+  return new DeleteItemCommand(params);
 };

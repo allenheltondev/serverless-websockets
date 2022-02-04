@@ -1,0 +1,7 @@
+[
+  {
+    "Source": "CLI",
+    "DetailType": "Send User Push Notification",
+    "Detail": "{\"userId\":\"myuserid\",\"message\":\"The user notification worked! Hello World!\",\"callback\":\"https://github.com/allenheltondev/serverless-websockets\"}"
+  }
+]

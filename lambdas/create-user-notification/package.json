@@ -1,0 +1,14 @@
+{
+  "name": "create-user-notification",
+  "version": "1.0.0",
+  "description": "Sends a push notification via WebSocket if a user is connected",
+  "main": "index.js",
+  "author": "allenheltondev",
+  "license": "MIT",
+  "dependencies": { },
+  "scripts": {},
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.44.0",
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.46.0"
+  }
+}

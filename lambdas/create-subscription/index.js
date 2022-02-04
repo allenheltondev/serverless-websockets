@@ -25,12 +25,12 @@ exports.handler = async (event) => {
 };
 
 exports.addSubscriptionToExistingConnection = async (connectionId, entityId) => {
-  const params = exports.buildPutItemCommandInput(connectionId, entityId);
-  await ddb.send(new PutItemCommand(params));
+  const command = exports.buildPutItemCommand(connectionId, entityId);
+  await ddb.send(command);
 };
 
-exports.buildPutItemCommandInput = (connectionId, entityId) => {
-  return {
+exports.buildPutItemCommand = (connectionId, entityId) => {
+  const params = {
     TableName: process.env.TABLE_NAME,
     Item: marshall({
       pk: `${connectionId}`,
@@ -40,6 +40,8 @@ exports.buildPutItemCommandInput = (connectionId, entityId) => {
       ttl: exports.calculateTtl(process.env.TTL_HOURS)
     })
   };
+
+  return new PutItemCommand(params);
 };
 
 exports.calculateTtl = (hoursToLive) => {

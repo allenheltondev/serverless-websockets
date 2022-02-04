@@ -11,6 +11,9 @@ info:
 
     * EventBridge event configuration for triggering WebSocket push
     notifications
+
+    * SNS message details when dead letter queues are in alarm
+
 defaultContentType: application/json
 servers:
   private:
@@ -59,6 +62,24 @@ channels:
         - name: EventBridge
       message:
         $ref: '#/components/messages/entityUpdated'
+
+  UserNotification:
+    publish:
+      operationId: sendUserPushNotification
+      description: Send a push notification to a user if they are connected to the WebSocket
+      tags:
+        - name: EventBridge
+      message:
+        $ref: '#/components/messages/sendUserNotification'
+
+  DLQAlarm:
+    subscribe:
+      operationId: dlqAlarm
+      description: Notification when an item is sent to a dead letter queue. Used for tracking failures
+      tags:
+        - name: SNS
+      message:
+        $ref: '#/components/messages/alarm'
 
 components:
   messages:
@@ -114,6 +135,47 @@ components:
             detail:
               entityId: myEntityId
               message: Status changed from 'New' to 'In Progress'
+
+    sendUserNotification:
+      name: sendUserNotification
+      title: Send a user a push notification
+      summary: >-
+        Sends a user a push notification if they are connected to the WebSocket. 
+        This users the *userId* that is provided from the WebSocket authorizer.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/sendUserNotificationMessage'
+      examples:
+        - payload:
+            detail-type: Send User Push Notification
+            detail:
+              userId: myuserid
+              message: A job you submitted has completed successfully
+              callback: https://www.gopherholesunlimited.com/gophers/g123/jobs
+
+    alarm:
+      name: dlqAlarm
+      title: Alert message when dead letter queues are in alarm
+      summary: >-
+        When an event has failed delivery or failed to process, it is added to a dead letter queue.
+        If there are any items in the DLQ, an alarm will turn on to notify concerned users of the failure.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/alarmMessage'
+      examples:
+        - payload:
+            Type: Notification
+            MessageId: 0b4e61a2-504f-5413-ad39-3bd50b1d354e
+            Subject: >- 
+              ALARM: "EntityUpdatedDLQAlarm" in US East (N. Virginia)
+            Message: 
+              AlarmName: EntityUpdateDLQAlarm
+              AlarmDescription: Alarm if Entity Update DLQ has messages              
+              NewStateValue: ALARM
+              NewStateReason: >-
+                Threshold Crossed: 1 datapoint [1.0 (04/02/22 16:47:00)] was greater than or equal to the threshold (1.0)
+              StateChangeTime: 2022-02-04T16:49:22.945+0000
+            Timestamp: 2022-02-04T16:49:22.989Z
 
   schemas:
     subscribe:
@@ -180,3 +242,86 @@ components:
               type: string
               description: Message to send in the push notification
               example: Status changed from 'New' to 'In Progress'
+
+    sendUserNotificationMessage:
+      type: object
+      required:
+        - detail-type
+        - detail
+      properties:
+        detail-type:
+          const: Send User Push Notification
+        detail:
+          type: object
+          required:
+            - userId
+            - message
+          properties:
+            userId:
+              type: string
+              description: Unique identifier for a user
+              example: myuserid
+            message:
+              type: string
+              description: Message to send in the push notification
+              example: A job you submitted has completed successfully
+            callback:
+              type: string
+              description: Callback url for user to get more information
+              example: https://www.gopherholesunlimited.com/gophers/g123/jobs
+
+    alarmMessage:
+      type: object
+      required:
+        - Type
+        - MessageId
+        - Subject
+        - Message
+        - Timestamp
+      properties:
+        Type:
+          const: Notification
+        MessageId:
+          type: string
+          description: Unqiue identifier of the alarm message 
+          example: 0b4e61a2-504f-5413-ad39-3bd50b1d354e
+        Subject:
+          type: string
+          description: Brief description of the alarm message
+          example: ALARM - "EntityUpdatedDLQAlarm" in US East (N. Virginia)
+        Message:
+          type: object
+          description: |
+            Stringified object with message details. **Will require parsing!**
+          required:
+            - AlarmName
+            - AlarmDescription
+            - NewStateValue
+            - NewStateReason
+            - StateChangeTime
+          properties:
+            AlarmName:
+              type: string
+              description: |
+                Name of the alarm that was triggered. *This will identify which DLQ has items in it.*
+              example: EntityUpdatedDLQAlarm
+            AlarmDescription:
+              type: string
+              description: Description of what the alarm is alerting on
+              example: Alarm if Entity Update DLQ has messages
+            NewStateValue:
+              type: string
+              description: Describes the current state of the alarm
+              example: ALARM
+            NewStateReason:
+              type: string
+              description: Reason why the alarm is firing
+              example: Threshold Crossed - 1 datapoint [1.0 (04/02/22 16:47:00)] was greater than or equal to the threshold (1.0)
+            StateChangeTime:
+              type: string
+              description: Timestamp when the alarm was triggered
+              example: 2022-02-04T16:49:22.945+0000
+        Timestamp:
+          type: string
+          description: Date and time when the event was triggered for the alarm
+          example: 2022-02-04T16:49:22.989Z

@@ -9,7 +9,7 @@ exports.handler = async (event, context, callback) => {
     await Promise.all(event.Records.map(async (record) => {
       const recordBody = JSON.parse(record.body);
 
-      await exports.postMessageToSubscribedConnections(recordBody.detail);
+      await exports.sendPushNotificationToUser(recordBody.detail);
     }));
   } catch (err) {
     console.error(err);
@@ -17,18 +17,18 @@ exports.handler = async (event, context, callback) => {
   }
 };
 
-exports.postMessageToSubscribedConnections = async (detail) => {
-  const connections = await exports.getSubscribedConnections(detail);
+exports.sendPushNotificationToUser = async (detail) => {
+  const connections = await exports.getUserConnections(detail);
   if (!connections?.length)
     return;
 
   await Promise.all(connections.map(async (connection) => {
-    const command = exports.buildPostToConnectionCommand(connection.pk.S, detail.entityId, detail.message);
+    const command = exports.buildPostToConnectionCommand(connection.pk.S, detail.message, detail.callback);
     await apig.send(command);
   }));
 };
 
-exports.getSubscribedConnections = async (request) => {
+exports.getUserConnections = async (request) => {
   const command = exports.buildQueryCommand(request);
   const response = await ddb.send(command);
   if (response?.Items?.length) {
@@ -46,21 +46,21 @@ exports.buildQueryCommand = (request) => {
       '#GSI1SK': 'GSI1SK'
     },
     ExpressionAttributeValues: marshall({
-      ':GSI1PK': request.entityId,
-      ':GSI1SK': 'subscription#'
+      ':GSI1PK': request.userId,
+      ':GSI1SK': 'user#'
     })
   };
 
   return new QueryCommand(params);
 };
 
-exports.buildPostToConnectionCommand = (connectionId, entityId, message) => {
+exports.buildPostToConnectionCommand = (connectionId, message, callback) => {
   const params = {
     ConnectionId: connectionId,
     Data: JSON.stringify({
-      type: 'Entity Updated',
-      entityId: entityId,
-      ...message && { message }
+      type: 'User Push Notification',
+      ...message && { message },
+      ...callback && { callback }
     })
   };
 

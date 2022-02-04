@@ -27,12 +27,12 @@ exports.handler = async (event) => {
 };
 
 exports.saveConnection = async (requestContext) => {
-  const params = exports.buildPutItemCommandInput(requestContext);
-  await ddb.send(new PutItemCommand(params));
+  const command = exports.buildPutItemCommand(requestContext);
+  await ddb.send(command);
 };
 
-exports.buildPutItemCommandInput = (requestContext) => {
-  return {
+exports.buildPutItemCommand = (requestContext) => {
+  const params = {
     TableName: process.env.TABLE_NAME,
     Item: marshall({
       pk: `${requestContext.connectionId}`,
@@ -46,6 +46,8 @@ exports.buildPutItemCommandInput = (requestContext) => {
       }
     })
   };
+
+  return new PutItemCommand(params);
 };
 
 exports.calculateTtl = (hoursToLive) => {

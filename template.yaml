@@ -360,6 +360,12 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt EntityUpdatedQueue.Arn
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt EntityUpdatedDLQ.Arn
       Environment:
         Variables:
           TABLE_NAME: !Ref TableName
@@ -384,6 +390,9 @@ Resources:
   EntityUpdatedQueue:
     Type: AWS::SQS::Queue
 
+  EntityUpdatedDLQ:
+    Type: AWS::SQS::Queue
+
   EntityUpdatedNotificationEventBridgeRule:
     Type: AWS::Events::Rule
     Properties:
@@ -394,8 +403,10 @@ Resources:
       Targets:
         - Id: EntityUpdatedQueue
           Arn: !GetAtt EntityUpdatedQueue.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt EntityUpdatedDLQ.Arn
 
-  EntityUpdatedQueuePolicy:
+  EventBridgeNotificationQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       PolicyDocument:
@@ -404,9 +415,106 @@ Resources:
           Principal:
             Service: events.amazonaws.com
           Action: SQS:SendMessage
-          Resource:  !GetAtt EntityUpdatedQueue.Arn
+          Resource: 
+            - !GetAtt EntityUpdatedQueue.Arn
+            - !GetAtt CreateUserNotificationQueue.Arn
       Queues:
         - Ref: EntityUpdatedQueue
+        - Ref: CreateUserNotificationQueue
+
+  EntityUpdatedDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm if Entity Update DLQ has messages
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value: !GetAtt EntityUpdatedDLQ.QueueName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+      - !Ref DLQAlarmTopic
+      TreatMissingData: notBreaching
+
+  DLQAlarmTopic:
+    Type: AWS::SNS::Topic
+
+  CreateUserNotificationQueue:
+    Type: AWS::SQS::Queue
+
+  CreateUserNotificationDLQ:
+    Type: AWS::SQS::Queue
+
+  CreateUserNotificationEventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Send a push notification to a specific user if they are connected
+      EventPattern:
+        detail-type:
+          - Send User Push Notification
+      Targets:
+        - Id: CreateUserNotificationQueue
+          Arn: !GetAtt CreateUserNotificationQueue.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt CreateUserNotificationDLQ.Arn
+
+  CreateUserNotificationDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm if Send User Notification DLQ has messages
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value: !GetAtt CreateUserNotificationDLQ.QueueName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+      - !Ref DLQAlarmTopic
+      TreatMissingData: notBreaching
+
+  CreateUserNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/create-user-notification
+      Events:
+        EntityUpdatedQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CreateUserNotificationQueue.Arn
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt CreateUserNotificationDLQ.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          INDEX_NAME: !Ref GSI1Name
+          ENDPOINT: !Join [ '', [ 'https://', !Ref WebsocketApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/dev'] ]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaSQSQueueExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                !Join ['/', [ !GetAtt WebsocketTable.Arn, 'index', !Ref GSI1Name] ]
+            - Effect: Allow
+              Action:
+                - execute-api:ManageConnections
+              Resource: 
+                - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketApi}/*
 
   CreateTestJwt:
     Type: AWS::Serverless::Function
