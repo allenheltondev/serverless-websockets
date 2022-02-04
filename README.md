@@ -1,6 +1,6 @@
-# AWS Serverless Websocket Quick Start
+# AWS Serverless WebSocket Quick Start
 
-This SAM template will deploy a functional websocket to your AWS account. The socket has the ability for connections to subscribe to entity updates in order to receive push notifications. 
+This SAM template will deploy a functional WebSocket to your AWS account. The socket has the ability for connections to subscribe to entity updates in order to receive push notifications. 
 
 ## Deployment Instructions
 
@@ -24,6 +24,14 @@ For convenience, these commands have been added together as a single npm script,
 npm run deploy
 ```
 
+## WebSocket Series
+
+This repo contains several branches and accompanying blog posts that walk you through how to build a WebSocket step by step. The `main` branch contains everything that has been currently released, but if you want to take a phased approach you can follow along below.
+
+1. [Intro To WebSockets](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets/) - [part-one branch](https://github.com/allenheltondev/serverless-websockets/tree/part-one)
+2. [Implementing Auth](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-two/) - [part-two branch](https://github.com/allenheltondev/serverless-websockets/tree/part-two)
+3. [Documenting with Async API Spec](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-three/) - [part-three branch](https://github.com/allenheltondev/serverless-websockets/tree/part-three)
+
 ## How It Works
 
 After deployment, you will have an API Gateway v2 resource with several endpoints registered:
@@ -33,7 +41,7 @@ After deployment, you will have an API Gateway v2 resource with several endpoint
 * *unsubscribe*
 * *$disconnect*
 
-These will be used by a websocket adapter in your user interface or testing tool to register a connection and subscribe for push notifications.
+These will be used by a WebSocket adapter in your user interface or testing tool to register a connection and subscribe for push notifications.
 
 The architecture diagram below explains the processes going on for each endpoint, plus how the push notifications are sent out.
 
@@ -56,7 +64,7 @@ If you do not provide the auth token in one of the two methods above, you will r
 
 ## Testing
 
-The easiest way to test your websocket connection is to use [Postman](https://www.postman.com). It supports [sending and receiving websockets](https://blog.postman.com/postman-supports-websocket-apis/) through it's application quickly and easily. You can find your websocket connection url as an output of the deployment script. 
+The easiest way to test your WebSocket connection is to use [Postman](https://www.postman.com). It supports [sending and receiving WebSocket](https://blog.postman.com/postman-supports-websocket-apis/) through it's application quickly and easily. You can find your WebSocket connection url as an output of the deployment script. 
 
 ## Resources
 
