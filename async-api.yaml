@@ -1,30 +1,38 @@
-asyncapi: 2.2.0
+asyncapi: 2.3.0
 info:
   title: Serverless WebSocket Tutorial
   version: 1.0.0
-  description: |
-    Describes the AWS WebSocket connection and methods generated from the `serverless-websockets` GitHub repo. Contained in the spec are:
+  description: >
+    Describes the AWS WebSocket connection and methods generated from the
+    `serverless-websockets` GitHub repo. Contained in the spec are:
+
 
     * WebSocket connection information
-    * EventBridge event configuration for triggering WebSocket push notifications
 
+    * EventBridge event configuration for triggering WebSocket push
+    notifications
 defaultContentType: application/json
-
-servers: 
+servers:
   private:
     url: jgm****.execute-api.us-east-1.amazonaws.com/dev
     protocol: wss
-    description: |
-      Connection url for the WebSocket. Generated on deployment and rendered as output with the label `WebsocketUri`
+    description: >
+      Connection url for the WebSocket. Generated on deployment and rendered as
+      output with the label `WebsocketUri`
+
 
       ### Authentication
-      To connect to this WebSocket, you must get a valid auth token from the *create-test-jwt* lambda function. You can use the token in one of two ways:
+
+      To connect to this WebSocket, you must get a valid auth token from the
+      *create-test-jwt* lambda function. You can use the token in one of two
+      ways:
         * As a query parameter on *$connect* called `auth_token`
         * As a comma separated value in the `Sec-WebSocket-Protocol` header
             * The `Sec-WebSocket-Protocol` header is required on connect. It must have a value of `websocket`. If using this header as the auth method, the value would be `websocket, <auth token>`
-      
+
       ### Example Connection Url
-      > wss://jgm****.execute-api.us-east-1.amazonaws.com/dev?access_token=eyJhbG
+
+      >     wss://jgm****.execute-api.us-east-1.amazonaws.com/dev?access_token=eyJhbG
 
 channels:
   /:
@@ -65,7 +73,7 @@ components:
         - payload:
             action: subscribe
             entityId: myEntityId
-
+    
     unsubscribe:
       name: unsubscribe
       title: Unsubscribe from Updates
@@ -94,7 +102,9 @@ components:
     entityUpdated:
       name: entityUpdated
       title: Notify the system of an entity update
-      summary: Send push notifications to subscribers for a specific entity when fields change
+      summary: >-
+        Send push notifications to subscribers for a specific entity when fields
+        change
       contentType: application/json
       payload:
         $ref: '#/components/schemas/entityUpdatedMessage'
@@ -138,7 +148,7 @@ components:
         - type
         - entityId
       properties:
-        type: 
+        type:
           const: Entity Updated
         entityId:
           type: string
@@ -148,7 +158,7 @@ components:
           type: string
           description: Message provided by the system related to the entity update
           example: Status changed from 'New' to 'In Progress'
-
+          
     entityUpdatedMessage:
       type: object
       required:
@@ -162,7 +172,7 @@ components:
           required:
             - entityId
           properties:
-            entityId: 
+            entityId:
               type: string
               description: Unique identifier for the updated entity
               example: myEntityId
