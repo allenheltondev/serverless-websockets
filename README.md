@@ -2,6 +2,15 @@
 
 This SAM template will deploy a functional WebSocket to your AWS account. The socket has the ability for connections to subscribe to entity updates in order to receive push notifications. 
 
+## WebSocket Series
+
+This repo contains several branches and accompanying blog posts that walk you through how to build a WebSocket step by step. The `main` branch contains everything that has been currently released, but if you want to take a phased approach you can follow along below.
+
+1. [Intro To WebSockets](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets/) - [part-one branch](https://github.com/allenheltondev/serverless-websockets/tree/part-one)
+2. [Implementing Auth](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-two/) - [part-two branch](https://github.com/allenheltondev/serverless-websockets/tree/part-two)
+3. [Documenting with Async API Spec](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-three/) - [part-three branch](https://github.com/allenheltondev/serverless-websockets/tree/part-three)
+4. [Adding User Notifications and Error Handling](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-four/) - [part-four branch](https://github.com/allenheltondev/serverless-websockets/tree/part-four)
+
 ## Deployment Instructions
 
 For initial deployment, you can use the following command from a terminal window that is in the root directory:
