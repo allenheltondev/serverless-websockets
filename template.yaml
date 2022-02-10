@@ -12,6 +12,13 @@ Parameters:
     Default: 'GSI1'
   JwtSecret:
     Type: String
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: String
+  DeployCustomDomain:
+    Type: String
+    Default: 'false'
 
 Globals:
   Function:
@@ -26,6 +33,10 @@ Globals:
     Environment:
       Variables:
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+Conditions:
+  ShouldDeployCustomDomain:
+    !Equals [!Ref DeployCustomDomain, 'true']
 
 Resources:
   DependencyLayer:
@@ -533,7 +544,50 @@ Resources:
                 - secretsmanager:GetSecretValue
               Resource: !Ref JwtSignatureSecret
 
+  WebSocketACM:
+    Type: AWS::CertificateManager::Certificate
+    Condition: ShouldDeployCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+      ValidationMethod: DNS
+
+  WebSocketDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: ShouldDeployCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref WebSocketACM
+          EndpointType: Regional
+          SecurityPolicy: TLS_1_2
+
+  DomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: ShouldDeployCustomDomain
+    Properties:
+      ApiId: !Ref WebsocketApi
+      DomainName: !Ref WebSocketDomain
+      Stage: !Ref Stage
+
+  DomainCNAME:
+    Type: AWS::Route53::RecordSet
+    Condition: ShouldDeployCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      ResourceRecords:
+        - !GetAtt WebSocketDomain.RegionalDomainName
+      TTL: 300
+      Type: CNAME
+
 Outputs:
   WebsocketUri:
     Description: The WSS Protocol Uri to connect to
     Value: !Join [ '', [ 'wss://', !Ref WebsocketApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/dev'] ]
+
+  WebSocketDomainName:
+    Description: The custom domain name for the created Websocket
+    Value: !If [ShouldDeployCustomDomain, !Ref DomainName, 'Not Provided']

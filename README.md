@@ -87,6 +87,22 @@ aws events put-events --entries file://examples/entity-updated.json
 aws events put-events --entries file://examples/send-user-push-notification.json
 ```
 
+## Custom Domain
+
+To add a custom domain to your WebSocket, you must complete the following prerequisites first:
+
+* [Purchase a domain name](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html) on Route53
+    * Verify ownership and make sure the domain is fully registered to you
+* [Create a public hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingHostedZone.html) for your domain name 
+    * Note - This can be done [through CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-route53-hostedzone.html), but I made this SAM template with the assumption that you already were using the domain for an API or user interface
+* Update your `samconfig.toml` file to include the following parameters:
+    * `DomainName` - This is the domain name you purchased plus the subdomain (if necessary. I used *ws.gopherholesunlimited.com*)
+    * `HostedZoneId` - This is the id of the hosted zone from step 2.
+        * If you added the hosted zone to the SAM template, you can replace all references to this with param with `!Ref <resource name of your hosted zone>`
+        * If you already have the hosted zone, you can get the id with the AWS CLI command `aws route53 list-hosted-zones` and use the value from the `Id` property. 
+            * **NOTE** - do not include `/hostedzone/` in the id. Only use the string after that
+    * `DeployCustomDomain` - Set to `true` so the resources will deploy. This defaults to false if not provided and will not deploy any domain resources.
+
 ## Resources
 
 A diagram of all generated resources is in the `images` folder with the name `resource-diagram.png`.
