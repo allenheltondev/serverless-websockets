@@ -12,13 +12,13 @@ Parameters:
     Default: 'GSI1'
   JwtSecret:
     Type: String
-  DomainName:
-    Type: String
-  HostedZoneId:
-    Type: String
   DeployCustomDomain:
     Type: String
     Default: 'false'
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: String  
 
 Globals:
   Function:
