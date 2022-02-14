@@ -10,6 +10,7 @@ This repo contains several branches and accompanying blog posts that walk you th
 2. [Implementing Auth](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-two/) - [part-two branch](https://github.com/allenheltondev/serverless-websockets/tree/part-two)
 3. [Documenting with Async API Spec](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-three/) - [part-three branch](https://github.com/allenheltondev/serverless-websockets/tree/part-three)
 4. [Adding User Notifications and Error Handling](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-four/) - [part-four branch](https://github.com/allenheltondev/serverless-websockets/tree/part-four)
+5. [Adding a Custom Domain](https://www.readysetcloud.io/blog/allen.helton/intro-to-aws-websockets-part-five/) - [part-five branch](https://github.com/allenheltondev/serverless-websockets/tree/part-five)
 
 ## Deployment Instructions
 
@@ -18,7 +19,7 @@ For initial deployment, you can use the following command from a terminal window
 sam deploy --guided
 ```
 
-This will walk you through deployment by providing you with prompts to answer. It will generate a samconfig.toml file.
+This will walk you through deployment by providing you with prompts to answer. It will generate a *samconfig.toml* file.
 
 After you walk through the guided setup, you can do subsequent deploys with the following commands
 
